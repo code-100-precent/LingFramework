@@ -1,13 +1,14 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/code-100-precent/LingFramework/pkg/constants"
+	"github.com/code-100-precent/LingFramework/pkg/cache"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -25,24 +26,37 @@ type Config struct {
 	UpdatedAt time.Time `json:"-" gorm:"autoUpdateTime"`
 }
 
-var configValueCache *ExpiredLRUCache[string, string]
-var envCache *ExpiredLRUCache[string, string]
+// ConfigManager 配置管理器
+type ConfigManager struct {
+	configValueCache cache.Cache
+	envCache         cache.Cache
+}
 
-func init() {
-	size := 1024 // fixed size
-	v, _ := strconv.ParseInt(GetEnv(constants.ENV_CONFIG_CACHE_SIZE), 10, 32)
-	if v > 0 {
-		size = int(v)
+var defaultConfigManager *ConfigManager
+
+// InitConfigManager 初始化配置管理器
+func InitConfigManager(cacheInstance cache.Cache) {
+	if cacheInstance == nil {
+		// 如果没有提供缓存，创建一个默认的LRU缓存
+		cacheInstance = cache.NewLRUCache(cache.LRUCacheConfig{
+			MaxSize:           1024,
+			DefaultExpiration: 10 * time.Second,
+			CleanupInterval:   1 * time.Minute,
+		})
 	}
-
-	var configCacheExpired = 10 * time.Second
-	exp, err := time.ParseDuration(GetEnv(constants.ENV_CONFIG_CACHE_EXPIRED))
-	if err == nil {
-		configCacheExpired = exp
+	defaultConfigManager = &ConfigManager{
+		configValueCache: cacheInstance,
+		envCache:         cacheInstance,
 	}
+}
 
-	configValueCache = NewExpiredLRUCache[string, string](size, configCacheExpired)
-	envCache = NewExpiredLRUCache[string, string](size, configCacheExpired)
+// getConfigManager 获取配置管理器（如果未初始化则使用默认值）
+func getConfigManager() *ConfigManager {
+	if defaultConfigManager == nil {
+		// 延迟初始化，使用默认缓存
+		InitConfigManager(nil)
+	}
+	return defaultConfigManager
 }
 
 func GetEnv(key string) string {
@@ -68,14 +82,18 @@ func GetIntEnv(key string) int64 {
 func LookupEnv(key string) (value string, found bool) {
 	key = strings.ToUpper(key)
 	if v, ok := os.LookupEnv(key); ok {
-		if envCache != nil {
-			envCache.Add(key, v)
+		cm := getConfigManager()
+		if cm.envCache != nil {
+			cm.envCache.Set(context.Background(), key, v, 10*time.Second)
 		}
 		return v, true
 	}
-	if envCache != nil {
-		if v, ok := envCache.Get(key); ok {
-			return v, true
+	cm := getConfigManager()
+	if cm.envCache != nil {
+		if val, ok := cm.envCache.Get(context.Background(), key); ok {
+			if v, ok := val.(string); ok {
+				return v, true
+			}
 		}
 	}
 	data, err := os.ReadFile(".env")
@@ -89,8 +107,9 @@ func LookupEnv(key string) (value string, found bool) {
 			vs := strings.SplitN(v, "=", 2)
 			k, vv := strings.ToUpper(strings.TrimSpace(vs[0])), strings.TrimSpace(vs[1])
 
-			if envCache != nil {
-				envCache.Add(k, vv)
+			cm := getConfigManager()
+			if cm.envCache != nil {
+				cm.envCache.Set(context.Background(), k, vv, 10*time.Second)
 			}
 			if k == key {
 				return vv, true
@@ -144,7 +163,10 @@ func LoadEnvs(objPtr any) {
 
 func SetValue(db *gorm.DB, key, value, format string, autoload, public bool) {
 	key = strings.ToUpper(key)
-	configValueCache.Remove(key)
+	cm := getConfigManager()
+	if cm.configValueCache != nil {
+		cm.configValueCache.Delete(context.Background(), key)
+	}
 
 	newV := &Config{
 		Key:      key,
@@ -169,9 +191,13 @@ func SetValue(db *gorm.DB, key, value, format string, autoload, public bool) {
 
 func GetValue(db *gorm.DB, key string) string {
 	key = strings.ToUpper(key)
-	cobj, ok := configValueCache.Get(key)
-	if ok {
-		return cobj
+	cm := getConfigManager()
+	if cm.configValueCache != nil {
+		if val, ok := cm.configValueCache.Get(context.Background(), key); ok {
+			if v, ok := val.(string); ok {
+				return v
+			}
+		}
 	}
 
 	var v Config
@@ -180,7 +206,9 @@ func GetValue(db *gorm.DB, key string) string {
 		return ""
 	}
 
-	configValueCache.Add(key, v.Value)
+	if cm.configValueCache != nil {
+		cm.configValueCache.Set(context.Background(), key, v.Value, 10*time.Second)
+	}
 	return v.Value
 }
 
@@ -223,16 +251,22 @@ func CheckValue(db *gorm.DB, key, defaultValue, format string, autoload, public 
 func LoadAutoloads(db *gorm.DB) {
 	var configs []Config
 	db.Where("autoload", true).Find(&configs)
+	cm := getConfigManager()
 	for _, v := range configs {
-		configValueCache.Add(v.Key, v.Value)
+		if cm.configValueCache != nil {
+			cm.configValueCache.Set(context.Background(), v.Key, v.Value, 10*time.Second)
+		}
 	}
 }
 
 func LoadPublicConfigs(db *gorm.DB) []Config {
 	var configs []Config
 	db.Where("public", true).Find(&configs)
+	cm := getConfigManager()
 	for _, v := range configs {
-		configValueCache.Add(v.Key, v.Value)
+		if cm.configValueCache != nil {
+			cm.configValueCache.Set(context.Background(), v.Key, v.Value, 10*time.Second)
+		}
 	}
 	return configs
 }

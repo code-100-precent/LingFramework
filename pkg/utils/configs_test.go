@@ -2,6 +2,8 @@
 package utils
 
 import (
+	"context"
+	"github.com/code-100-precent/LingFramework/pkg/cache"
 	"io"
 	"log"
 	"os"
@@ -169,9 +171,6 @@ func TestLoadAutoloads(t *testing.T) {
 	SetValue(db, "autoload_true_key", "autoload_value", "text", true, false)
 	SetValue(db, "autoload_false_key", "no_autoload_value", "text", false, true)
 
-	// Clear cache to ensure we're testing the load functionality
-	configValueCache.Purge()
-
 	// Load autoload configs
 	LoadAutoloads(db)
 
@@ -180,7 +179,7 @@ func TestLoadAutoloads(t *testing.T) {
 	assert.Equal(t, "autoload_value", value)
 
 	// Check that non-autoload config is not in cache (would need to hit DB)
-	configValueCache.Remove("AUTOLOAD_FALSE_KEY")
+	// Note: We can't directly access the cache anymore, but GetValue will work correctly
 	value = GetValue(db, "autoload_false_key")
 	assert.Equal(t, "no_autoload_value", value)
 }
@@ -448,13 +447,17 @@ ANOTHER_ENV_KEY=another_value
 
 func TestCacheExpiration(t *testing.T) {
 	// Create a cache with short expiration for testing
-	shortCache := NewExpiredLRUCache[string, string](10, 10*time.Millisecond)
+	shortCache := cache.NewLRUCache(cache.LRUCacheConfig{
+		MaxSize:           10,
+		DefaultExpiration: 10 * time.Millisecond,
+		CleanupInterval:   1 * time.Minute,
+	})
 
 	// Add an item
-	shortCache.Add("test_key", "test_value")
+	shortCache.Set(context.Background(), "test_key", "test_value", 10*time.Millisecond)
 
 	// Verify it exists
-	value, found := shortCache.Get("test_key")
+	value, found := shortCache.Get(context.Background(), "test_key")
 	assert.True(t, found)
 	assert.Equal(t, "test_value", value)
 
@@ -462,7 +465,7 @@ func TestCacheExpiration(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify it's expired
-	value, found = shortCache.Get("test_key")
+	value, found = shortCache.Get(context.Background(), "test_key")
 	assert.False(t, found)
-	assert.Equal(t, "", value)
+	assert.Nil(t, value)
 }
