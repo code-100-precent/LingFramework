@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/code-100-precent/LingFramework/pkg/constants"
+	"github.com/code-100-precent/LingFramework/pkg/utils"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -77,4 +78,12 @@ func GetUserByUID(db *gorm.DB, userID uint) (*User, error) {
 		return nil, result.Error
 	}
 	return &val, nil
+}
+
+func Logout(c *gin.Context, user *User) {
+	c.Set(constants.UserField, nil)
+	session := sessions.Default(c)
+	session.Delete(constants.UserField)
+	session.Save()
+	utils.Sig().Emit(constants.SigUserLogout, user, c)
 }

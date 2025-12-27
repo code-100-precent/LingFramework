@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/code-100-precent/LingFramework/pkg/constants"
+	docsPkg "github.com/code-100-precent/LingFramework/pkg/docs"
 	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
@@ -68,7 +69,43 @@ type UriDoc struct {
 }
 
 func RegisterHandler(prefix string, r *gin.Engine, uriDocs []UriDoc, objDocs []WebObjectDoc, db *gorm.DB) {
+	RegisterHandlerWithAutoGen(prefix, r, uriDocs, objDocs, db, true)
+}
+
+// RegisterHandlerWithAutoGen 注册文档处理器，支持自动生成
+func RegisterHandlerWithAutoGen(prefix string, r *gin.Engine, uriDocs []UriDoc, objDocs []WebObjectDoc, db *gorm.DB, autoGen bool) {
 	prefix = strings.TrimSuffix(prefix, "/")
+
+	// 如果启用自动生成，尝试从路由中提取文档
+	if autoGen {
+		collector := docsPkg.NewRouteCollector()
+		generator := docsPkg.NewAutoDocGenerator(collector)
+		autoUriDocs := generator.GenerateUriDocs(r)
+
+		// 合并手动定义的文档和自动生成的文档
+		// 手动定义的文档优先，自动生成的文档只补充缺失的
+		uriDocsMap := make(map[string]UriDoc)
+		// 先添加手动定义的文档（这些已经有完整的 Desc、Request、Response 等信息）
+		for _, doc := range uriDocs {
+			key := doc.Method + ":" + doc.Path
+			uriDocsMap[key] = doc
+		}
+		// 转换并合并自动生成的文档（只添加手动定义中没有的）
+		for _, doc := range autoUriDocs {
+			key := doc.Method + ":" + doc.Path
+			if _, exists := uriDocsMap[key]; !exists {
+				// 自动生成的文档，使用智能描述
+				uriDocsMap[key] = convertDocsUriDoc(doc)
+			}
+			// 如果已存在手动定义的文档，保留手动定义的（包括 Desc），不覆盖
+		}
+		// 转换回切片
+		uriDocs = make([]UriDoc, 0, len(uriDocsMap))
+		for _, doc := range uriDocsMap {
+			uriDocs = append(uriDocs, doc)
+		}
+	}
+
 	r.GET(prefix+".json", func(ctx *gin.Context) {
 		ctx.Set(constants.DbField, db)
 		docs := map[string]any{
@@ -77,6 +114,32 @@ func RegisterHandler(prefix string, r *gin.Engine, uriDocs []UriDoc, objDocs []W
 			"site": GetRenderPageContext(ctx),
 		}
 		ctx.JSON(http.StatusOK, docs)
+	})
+
+	// OpenAPI 导出
+	r.GET(prefix+"/openapi.json", func(ctx *gin.Context) {
+		scheme := "http"
+		if ctx.Request.TLS != nil {
+			scheme = "https"
+		}
+		baseURL := scheme + "://" + ctx.Request.Host
+		openapiGen := docsPkg.NewOpenAPIGenerator(baseURL, "1.0.0", "LingFramework API")
+		// 转换类型
+		docsUriDocs := make([]docsPkg.UriDoc, len(uriDocs))
+		for i, doc := range uriDocs {
+			docsUriDocs[i] = convertToDocsUriDoc(doc)
+		}
+		docsObjDocs := make([]docsPkg.WebObjectDoc, len(objDocs))
+		for i, doc := range objDocs {
+			docsObjDocs[i] = convertToDocsWebObjectDoc(doc)
+		}
+		spec := openapiGen.Generate(docsUriDocs, docsObjDocs)
+		jsonData, err := spec.ToJSON()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.Data(http.StatusOK, "application/json", jsonData)
 	})
 
 	r.GET(prefix, func(ctx *gin.Context) {
@@ -268,4 +331,110 @@ func parseType(rt reflect.Type) string {
 	}
 
 	return ""
+}
+
+// convertDocsUriDoc 转换 docs 包的 UriDoc 为 LingEcho 的 UriDoc
+func convertDocsUriDoc(doc docsPkg.UriDoc) UriDoc {
+	return UriDoc{
+		Group:        doc.Group,
+		Path:         doc.Path,
+		Summary:      doc.Summary,
+		Desc:         doc.Desc,
+		AuthRequired: doc.AuthRequired,
+		Method:       doc.Method,
+		Request:      convertDocsDocField(doc.Request),
+		Response:     convertDocsDocField(doc.Response),
+	}
+}
+
+// convertToDocsUriDoc 转换 LingEcho 的 UriDoc 为 docs 包的 UriDoc
+func convertToDocsUriDoc(doc UriDoc) docsPkg.UriDoc {
+	return docsPkg.UriDoc{
+		Group:        doc.Group,
+		Path:         doc.Path,
+		Summary:      doc.Summary,
+		Desc:         doc.Desc,
+		AuthRequired: doc.AuthRequired,
+		Method:       doc.Method,
+		Request:      convertToDocsDocField(doc.Request),
+		Response:     convertToDocsDocField(doc.Response),
+	}
+}
+
+// convertDocsDocField 转换 docs 包的 DocField 为 LingEcho 的 DocField
+func convertDocsDocField(field *docsPkg.DocField) *DocField {
+	if field == nil {
+		return nil
+	}
+	result := &DocField{
+		FieldName: field.FieldName,
+		Name:      field.Name,
+		Desc:      field.Desc,
+		Type:      field.Type,
+		Default:   field.Default,
+		Required:  field.Required,
+		CanNull:   field.CanNull,
+		IsArray:   field.IsArray,
+		IsPrimary: field.IsPrimary,
+	}
+	if len(field.Fields) > 0 {
+		result.Fields = make([]DocField, len(field.Fields))
+		for i, f := range field.Fields {
+			result.Fields[i] = *convertDocsDocField(&f)
+		}
+	}
+	return result
+}
+
+// convertToDocsDocField 转换 LingEcho 的 DocField 为 docs 包的 DocField
+func convertToDocsDocField(field *DocField) *docsPkg.DocField {
+	if field == nil {
+		return nil
+	}
+	result := &docsPkg.DocField{
+		FieldName: field.FieldName,
+		Name:      field.Name,
+		Desc:      field.Desc,
+		Type:      field.Type,
+		Default:   field.Default,
+		Required:  field.Required,
+		CanNull:   field.CanNull,
+		IsArray:   field.IsArray,
+		IsPrimary: field.IsPrimary,
+	}
+	if len(field.Fields) > 0 {
+		result.Fields = make([]docsPkg.DocField, len(field.Fields))
+		for i, f := range field.Fields {
+			result.Fields[i] = *convertToDocsDocField(&f)
+		}
+	}
+	return result
+}
+
+// convertToDocsWebObjectDoc 转换 LingEcho 的 WebObjectDoc 为 docs 包的 WebObjectDoc
+func convertToDocsWebObjectDoc(doc WebObjectDoc) docsPkg.WebObjectDoc {
+	result := docsPkg.WebObjectDoc{
+		Group:        doc.Group,
+		Path:         doc.Path,
+		Desc:         doc.Desc,
+		AuthRequired: doc.AuthRequired,
+		AllowMethods: doc.AllowMethods,
+		Filters:      doc.Filters,
+		Orders:       doc.Orders,
+		Searches:     doc.Searches,
+		Editables:    doc.Editables,
+	}
+	if len(doc.Fields) > 0 {
+		result.Fields = make([]docsPkg.DocField, len(doc.Fields))
+		for i, f := range doc.Fields {
+			result.Fields[i] = *convertToDocsDocField(&f)
+		}
+	}
+	if len(doc.Views) > 0 {
+		result.Views = make([]docsPkg.UriDoc, len(doc.Views))
+		for i, v := range doc.Views {
+			result.Views[i] = convertToDocsUriDoc(v)
+		}
+	}
+	return result
 }

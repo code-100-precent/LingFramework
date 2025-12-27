@@ -163,3 +163,18 @@ func (h *Handlers) Register(engine *gin.Engine) {
 		LingEcho.RegisterHandler(config.GlobalConfig.DocsPrefix, engine, h.GetDocs(), objDocs, h.db)
 	}
 }
+
+// registerAuthRoutes User Module
+func (h *Handlers) registerAuthRoutes(r *gin.RouterGroup) {
+	auth := r.Group(config.GlobalConfig.AuthPrefix)
+	{
+		// register
+		auth.GET("/register", h.handleUserSignupPage)
+
+		// login
+		auth.GET("/login", h.handleUserSigninPage)
+
+		// password management
+		auth.GET("/reset-password", h.handleUserResetPasswordPage)
+	}
+}
