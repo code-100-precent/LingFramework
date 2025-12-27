@@ -21,7 +21,6 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 
 		// Filter rules:
 		// 1. Filter monitoring-related paths (/metrics, /monitor, etc.)
-		// 2. Filter general GET requests (only log POST, PUT, DELETE, PATCH, etc.)
 		shouldLog := true
 
 		// Filter monitoring-related paths
@@ -29,11 +28,6 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			strings.Contains(path, "/monitor") ||
 			strings.Contains(path, "/static") ||
 			strings.Contains(path, "/favicon.ico") {
-			shouldLog = false
-		}
-
-		// Filter general GET requests (only log non-GET requests)
-		if method == "GET" && shouldLog {
 			shouldLog = false
 		}
 

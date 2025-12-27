@@ -127,7 +127,7 @@ func TestScheduler_TaskHandler(t *testing.T) {
 	handler := &testHandler{executed: &executed}
 
 	task := &Task{
-		ID:       "handler-task",
+		ID:       "handlers-task",
 		Name:     "Handler Task",
 		Schedule: "0 * * * * *",
 		Handler:  handler,
@@ -142,7 +142,7 @@ func TestScheduler_TaskHandler(t *testing.T) {
 	scheduler.executeTask(task)
 
 	if !executed {
-		t.Error("handler should have been executed")
+		t.Error("handlers should have been executed")
 	}
 }
 
@@ -159,7 +159,7 @@ func TestScheduler_AddTask_NoHandler(t *testing.T) {
 	scheduler := NewScheduler(nil)
 
 	task := &Task{
-		ID:       "no-handler",
+		ID:       "no-handlers",
 		Name:     "No Handler",
 		Schedule: "0 * * * * *",
 		Enabled:  true,
@@ -167,7 +167,7 @@ func TestScheduler_AddTask_NoHandler(t *testing.T) {
 
 	err := scheduler.AddTask(task)
 	if err == nil {
-		t.Error("expected error when task has no handler")
+		t.Error("expected error when task has no handlers")
 	}
 }
 
@@ -326,10 +326,10 @@ func TestTask_MarshalJSON(t *testing.T) {
 		t.Error("expected non-empty JSON data")
 	}
 
-	// Verify it doesn't include handler fields
+	// Verify it doesn't include handlers fields
 	jsonStr := string(data)
 	if contains(jsonStr, "Handler") || contains(jsonStr, "HandlerFunc") {
-		t.Error("JSON should not include handler fields")
+		t.Error("JSON should not include handlers fields")
 	}
 }
 

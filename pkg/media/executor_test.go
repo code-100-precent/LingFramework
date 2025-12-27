@@ -203,7 +203,7 @@ func TestAsyncTaskRunner_HandlePacket_RequestBuilderError(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if !errorCalled {
-		t.Error("expected error handler to be called")
+		t.Error("expected error handlers to be called")
 	}
 }
 
@@ -242,7 +242,7 @@ func TestAsyncTaskRunner_HandleMediaData(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	if !packetCalled {
-		t.Error("expected packet handler to be called")
+		t.Error("expected packet handlers to be called")
 	}
 
 	// Test state data
@@ -254,7 +254,7 @@ func TestAsyncTaskRunner_HandleMediaData(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if !stateCalled {
-		t.Error("expected state handler to be called")
+		t.Error("expected state handlers to be called")
 	}
 
 	runner.ReleaseResources()
@@ -326,7 +326,7 @@ func TestAsyncTaskRunner_ExecuteTask_Error(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	if !errorCalled {
-		t.Error("expected error handler to be called")
+		t.Error("expected error handlers to be called")
 	}
 
 	runner.ReleaseResources()

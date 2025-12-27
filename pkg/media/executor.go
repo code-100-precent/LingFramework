@@ -200,7 +200,7 @@ func (tr *AsyncTaskRunner[T]) executeTask(ctx context.Context, req PacketRequest
 
 	err := tr.TaskExecutor(taskCtx, req.H, req)
 	if err != nil {
-		logger.Error("Task execution error", zap.Any("handler", req.H), zap.Error(err))
+		logger.Error("Task execution error", zap.Any("handlers", req.H), zap.Error(err))
 		req.H.CauseError(tr, err)
 	}
 }

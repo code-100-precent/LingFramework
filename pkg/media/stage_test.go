@@ -89,7 +89,7 @@ func TestPipelineStage_CauseError(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if !errorCalled {
-		t.Error("expected error handler to be called")
+		t.Error("expected error handlers to be called")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestPipelineStage_EmitState(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if !stateCalled {
-		t.Error("expected state handler to be called")
+		t.Error("expected state handlers to be called")
 	}
 }
 
@@ -308,7 +308,7 @@ func TestPipelineStage_ProcessPacketAsync_WithPreFilterError(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if !errorCalled {
-		t.Error("expected error handler to be called")
+		t.Error("expected error handlers to be called")
 	}
 }
 

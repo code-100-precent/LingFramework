@@ -157,7 +157,7 @@ func TestSessionHandlerAdapter(t *testing.T) {
 
 	// Test EmitState
 	session.On("test_state", func(event StateChange) {
-		// State handler
+		// State handlers
 	})
 	adapter.EmitState(adapter, "test_state")
 	time.Sleep(100 * time.Millisecond)
@@ -174,7 +174,7 @@ func TestSessionHandlerAdapter(t *testing.T) {
 
 	// Test CauseError
 	session.Error(func(sender any, err error) {
-		// Error handler
+		// Error handlers
 	})
 	adapter.CauseError(adapter, errors.New("test error"))
 	time.Sleep(100 * time.Millisecond)

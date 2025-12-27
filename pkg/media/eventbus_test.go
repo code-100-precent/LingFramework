@@ -47,7 +47,7 @@ func TestEventBus_Subscribe(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	if !called {
-		t.Error("expected handler to be called")
+		t.Error("expected handlers to be called")
 	}
 }
 
@@ -224,7 +224,7 @@ func TestEventBus_HandlerPanic(t *testing.T) {
 	defer bus.Close()
 
 	bus.Subscribe(EventTypePacket, func(ctx context.Context, event *MediaEvent) error {
-		panic("handler panic")
+		panic("handlers panic")
 	})
 
 	event := &MediaEvent{
@@ -244,7 +244,7 @@ func TestEventBus_HandlerError(t *testing.T) {
 	defer bus.Close()
 
 	bus.Subscribe(EventTypePacket, func(ctx context.Context, event *MediaEvent) error {
-		return &testError{msg: "handler error"}
+		return &testError{msg: "handlers error"}
 	})
 
 	event := &MediaEvent{

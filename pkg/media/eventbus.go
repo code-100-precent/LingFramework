@@ -63,14 +63,14 @@ func NewEventBus(ctx context.Context, queueSize, workers int) *EventBus {
 	return bus
 }
 
-// Subscribe registers an event handler for a specific event type
+// Subscribe registers an event handlers for a specific event type
 func (eb *EventBus) Subscribe(eventType EventType, handler EventHandler) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
 	eb.subscribers[eventType] = append(eb.subscribers[eventType], handler)
 }
 
-// Unsubscribe removes an event handler
+// Unsubscribe removes an event handlers
 func (eb *EventBus) Unsubscribe(eventType EventType, handler EventHandler) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
@@ -137,14 +137,14 @@ func (eb *EventBus) dispatch(event *MediaEvent) {
 		func(h EventHandler) {
 			defer func() {
 				if r := recover(); r != nil {
-					logger.Error("event handler panic",
+					logger.Error("event handlers panic",
 						zap.String("type", string(event.Type)),
 						zap.String("sessionID", event.SessionID),
 						zap.Any("error", r))
 				}
 			}()
 			if err := h(eb.ctx, event); err != nil {
-				logger.Error("event handler error",
+				logger.Error("event handlers error",
 					zap.String("type", string(event.Type)),
 					zap.String("sessionID", event.SessionID),
 					zap.Error(err))

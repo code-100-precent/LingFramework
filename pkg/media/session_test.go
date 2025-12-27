@@ -341,7 +341,7 @@ func TestMediaSession_EmitState(t *testing.T) {
 	time.Sleep(800 * time.Millisecond)
 
 	if !stateCalled {
-		t.Error("expected state handler to be called")
+		t.Error("expected state handlers to be called")
 	}
 
 	// Check metrics - state monitoring processor should have updated this
@@ -350,8 +350,8 @@ func TestMediaSession_EmitState(t *testing.T) {
 	count := session.GetStateChangeCount()
 	if count == 0 {
 		// If still 0, the event might not have been processed yet
-		// This could be a timing issue, so we'll just verify the handler was called
-		t.Logf("state change count is 0 (may be timing issue), but handler was called: %v", stateCalled)
+		// This could be a timing issue, so we'll just verify the handlers was called
+		t.Logf("state change count is 0 (may be timing issue), but handlers was called: %v", stateCalled)
 	}
 
 	session.Close()
@@ -374,7 +374,7 @@ func TestMediaSession_CauseError(t *testing.T) {
 	time.Sleep(800 * time.Millisecond)
 
 	if !errorCalled {
-		t.Error("expected error handler to be called")
+		t.Error("expected error handlers to be called")
 	}
 
 	// Check metrics - error monitoring processor should have updated this
@@ -383,8 +383,8 @@ func TestMediaSession_CauseError(t *testing.T) {
 	count := session.GetErrorCount()
 	if count == 0 {
 		// If still 0, the event might not have been processed yet
-		// This could be a timing issue, so we'll just verify the handler was called
-		t.Logf("error count is 0 (may be timing issue), but handler was called: %v", errorCalled)
+		// This could be a timing issue, so we'll just verify the handlers was called
+		t.Logf("error count is 0 (may be timing issue), but handlers was called: %v", errorCalled)
 	}
 
 	session.Close()
@@ -584,10 +584,10 @@ func TestMediaSession_OnStateChange(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	if !beginCalled {
-		t.Error("expected begin handler to be called")
+		t.Error("expected begin handlers to be called")
 	}
 	if !allCalled {
-		t.Error("expected all states handler to be called")
+		t.Error("expected all states handlers to be called")
 	}
 }
 

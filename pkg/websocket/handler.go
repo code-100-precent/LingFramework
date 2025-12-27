@@ -12,12 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// Handler is a WebSocket HTTP handler
+// Handler is a WebSocket HTTP handlers
 type Handler struct {
 	hub *Hub
 }
 
-// NewHandler creates a new WebSocket handler
+// NewHandler creates a new WebSocket handlers
 func NewHandler(hub *Hub) *Handler {
 	return &Handler{
 		hub: hub,

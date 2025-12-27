@@ -36,7 +36,7 @@ func makeRouterWithSign() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(SignVerifyMiddleware())
-	// echo handler：验证 body 是否被正确复原
+	// echo handlers：验证 body 是否被正确复原
 	r.POST("/echo", func(c *gin.Context) {
 		b, _ := io.ReadAll(c.Request.Body)
 		c.String(200, string(b))

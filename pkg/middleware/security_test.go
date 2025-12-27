@@ -26,7 +26,7 @@ func TestSecurityMiddleware_Headers_And_AllowedOrigin(t *testing.T) {
 	cfg.AllowedOrigins = []string{"http://allowed.com", "https://sub.example.com*"} // 支持前缀通配
 	r.Use(SecurityMiddleware(cfg))
 
-	// 正常 handler
+	// 正常 handlers
 	r.GET("/ok", func(c *gin.Context) {
 		c.String(200, "ok")
 	})
@@ -264,7 +264,7 @@ func Test_generateRandomKey_BasicLen(t *testing.T) {
 	// base64 后长度会变，这里只校验非空即可
 }
 
-// 检查 CSRFMiddleware 返回的 handler 可重复读取（多次请求）
+// 检查 CSRFMiddleware 返回的 handlers 可重复读取（多次请求）
 func TestCSRFMiddleware_Reusability(t *testing.T) {
 	r := newGin()
 	cfg := DefaultSecurityConfig()

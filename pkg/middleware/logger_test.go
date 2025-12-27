@@ -23,7 +23,7 @@ func TestLoggerMiddleware_Basic(t *testing.T) {
 	r := gin.New()
 	r.Use(LoggerMiddleware(logger))
 
-	// Simulate business handler: write 201 status code
+	// Simulate business handlers: write 201 status code
 	r.POST("/hello", func(c *gin.Context) {
 		// Simulate some processing time
 		time.Sleep(5 * time.Millisecond)

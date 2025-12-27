@@ -110,7 +110,7 @@ func TestAbortWithStatus_StopsNextHandlers(t *testing.T) {
 	r, rr := newCtx()
 	r.GET("/abort", func(c *gin.Context) {
 		AbortWithStatus(c, http.StatusTeapot) // 418
-		// 即使后续代码尝试写入，也不应该生效（Abort 会停止后续 handler）
+		// 即使后续代码尝试写入，也不应该生效（Abort 会停止后续 handlers）
 	}, func(c *gin.Context) {
 		// 若未被中断，这里会设置一个 header，测试中应当观测不到
 		c.Header("X-Should-Not-See", "1")
@@ -123,7 +123,7 @@ func TestAbortWithStatus_StopsNextHandlers(t *testing.T) {
 		t.Fatalf("status=%d, want 418", rr.Code)
 	}
 	if rr.Header().Get("X-Should-Not-See") != "" {
-		t.Fatalf("Abort did not stop next handler")
+		t.Fatalf("Abort did not stop next handlers")
 	}
 	// AbortWithStatus 通常没有 body
 	if rr.Body.Len() != 0 {
@@ -152,6 +152,6 @@ func TestAbortWithStatusJSON(t *testing.T) {
 		t.Fatalf("error field=%v, want 'nope'", got["error"])
 	}
 	if rr.Header().Get("X-After") != "" {
-		t.Fatalf("AbortWithStatusJSON did not stop next handler")
+		t.Fatalf("AbortWithStatusJSON did not stop next handlers")
 	}
 }

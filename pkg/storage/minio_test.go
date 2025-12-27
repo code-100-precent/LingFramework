@@ -48,7 +48,7 @@ package stores
 //	}
 //}
 //
-//func (s *fakeS3) handler(w http.ResponseWriter, r *http.Request) {
+//func (s *fakeS3) handlers(w http.ResponseWriter, r *http.Request) {
 //	// 路径： /<bucket>[/<key>]
 //	clean := path.Clean(r.URL.Path)
 //	parts := strings.Split(strings.TrimPrefix(clean, "/"), "/")
@@ -262,7 +262,7 @@ package stores
 //
 //	// fake S3 server
 //	s3 := newFakeS3(bucket)
-//	ts := httptest.NewServer(http.HandlerFunc(s3.handler))
+//	ts := httptest.NewServer(http.HandlerFunc(s3.handlers))
 //	defer ts.Close()
 //
 //	// store 指向 fake S3

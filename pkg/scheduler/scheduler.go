@@ -17,8 +17,8 @@ type Task struct {
 	ID          string                          `json:"id"`
 	Name        string                          `json:"name"`
 	Schedule    string                          `json:"schedule"` // Cron expression
-	Handler     TaskHandler                     `json:"-"`        // Task handler function
-	HandlerFunc func(ctx context.Context) error `json:"-"`        // Alternative handler
+	Handler     TaskHandler                     `json:"-"`        // Task handlers function
+	HandlerFunc func(ctx context.Context) error `json:"-"`        // Alternative handlers
 	Enabled     bool                            `json:"enabled"`
 	LastRun     *time.Time                      `json:"last_run"`
 	NextRun     *time.Time                      `json:"next_run"`
@@ -172,7 +172,7 @@ func (s *Scheduler) AddTask(task *Task) error {
 		return fmt.Errorf("task schedule is required")
 	}
 	if task.Handler == nil && task.HandlerFunc == nil {
-		return fmt.Errorf("task handler is required")
+		return fmt.Errorf("task handlers is required")
 	}
 
 	s.mu.Lock()
@@ -505,7 +505,7 @@ func (t *Task) MarshalJSON() ([]byte, error) {
 	type Alias Task
 	return json.Marshal(&struct {
 		*Alias
-		Handler     interface{} `json:"handler,omitempty"`
+		Handler     interface{} `json:"handlers,omitempty"`
 		HandlerFunc interface{} `json:"handlerFunc,omitempty"`
 	}{
 		Alias: (*Alias)(t),

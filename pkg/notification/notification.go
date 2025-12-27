@@ -47,12 +47,12 @@ func NewNotificationManager() *NotificationManager {
 	}
 }
 
-// Register registers a notification handler
+// Register registers a notification handlers
 func (nm *NotificationManager) Register(notif Notification) {
 	nm.notifications[notif.Type()] = notif
 }
 
-// Send sends a notification using the appropriate handler
+// Send sends a notification using the appropriate handlers
 func (nm *NotificationManager) Send(ctx context.Context, req NotificationRequest) error {
 	handler, ok := nm.notifications[req.Type]
 	if !ok {

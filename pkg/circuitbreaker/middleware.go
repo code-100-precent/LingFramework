@@ -105,16 +105,16 @@ func Middleware(cb *CircuitBreaker, fallback func(*gin.Context, error)) gin.Hand
 			return
 		}
 
-		// Execute the handler with circuit breaker protection
+		// Execute the handlers with circuit breaker protection
 		err := cb.Execute(func() error {
 			c.Next()
-			// Check if there were any errors in the handler chain
+			// Check if there were any errors in the handlers chain
 			if len(c.Errors) > 0 {
 				return c.Errors.Last()
 			}
 			// Check if response indicates an error
 			if c.Writer.Status() >= 400 {
-				return errors.New("handler returned error status")
+				return errors.New("handlers returned error status")
 			}
 			return nil
 		})

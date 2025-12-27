@@ -229,7 +229,7 @@ func TestLoadTasksFromStorage_ErrorHandling(t *testing.T) {
 func TestAddTask_ErrorPaths(t *testing.T) {
 	scheduler := NewScheduler(nil)
 
-	// Test with task that has invalid schedule but valid handler
+	// Test with task that has invalid schedule but valid handlers
 	task := &Task{
 		ID:       "invalid-schedule",
 		Name:     "Invalid Schedule",
