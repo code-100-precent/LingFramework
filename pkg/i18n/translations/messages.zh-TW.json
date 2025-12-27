@@ -12,6 +12,19 @@
   "validation.required": "此欄位為必填項",
   "validation.email": "無效的郵箱格式",
   "validation.min": "最小值為 %d",
-  "validation.max": "最大值為 %d"
+  "validation.max": "最大值為 %d",
+  "validation.rule.required": "欄位 '%s' 為必填項",
+  "validation.rule.email": "欄位 '%s' 必須是有效的郵箱地址",
+  "validation.rule.xss": "欄位 '%s' 包含潛在危險內容 (XSS攻擊)",
+  "validation.rule.sql": "欄位 '%s' 包含潛在危險內容 (SQL注入)",
+  "validation.rule.min": "欄位 '%s' 必須至少為 %v",
+  "validation.rule.max": "欄位 '%s' 必須最多為 %v",
+  "validation.rule.minlen": "欄位 '%s' 長度必須至少為 %v 個字符",
+  "validation.rule.maxlen": "欄位 '%s' 長度必須最多為 %v 個字符",
+  "validation.rule.url": "欄位 '%s' 必須是有效的URL",
+  "validation.rule.phone": "欄位 '%s' 必須是有效的電話號碼",
+  "validation.rule.alphanum": "欄位 '%s' 只能包含字母和數字",
+  "validation.rule.numeric": "欄位 '%s' 必須是數字",
+  "validation.rule.alpha": "欄位 '%s' 只能包含字母"
 }
 
