@@ -55,12 +55,15 @@ func createTestConnection(t *testing.T, hub *Hub, userID string) (*Connection, *
 
 func TestGenerateConnectionID(t *testing.T) {
 	id1 := generateConnectionID()
+	// Small delay to ensure different timestamps
+	time.Sleep(time.Microsecond)
 	id2 := generateConnectionID()
 
 	assert.NotEmpty(t, id1)
 	assert.NotEmpty(t, id2)
 	assert.NotEqual(t, id1, id2)
 	assert.Contains(t, id1, "conn_")
+	assert.Contains(t, id2, "conn_")
 }
 
 func TestConnection_SendMessage(t *testing.T) {
