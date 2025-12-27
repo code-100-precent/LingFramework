@@ -38,7 +38,7 @@ type G722Band2 struct {
 	sp int16
 }
 
-// G722Encoder G.722编码器
+// G722Encoder represents a G.722 encoder
 type G722Encoder struct {
 	band0 *G722Band0
 	band1 *G722Band1
@@ -46,7 +46,7 @@ type G722Encoder struct {
 	rate  int
 }
 
-// G722Decoder G.722解码器
+// G722Decoder represents a G.722 decoder
 type G722Decoder struct {
 	band0 *G722Band0
 	band1 *G722Band1
@@ -55,10 +55,10 @@ type G722Decoder struct {
 }
 
 func createG722Decode(src, pcm media.CodecConfig) media.EncoderFunc {
-	// 使用配置的采样率，如果未设置则使用 G.722 标准采样率 16000Hz
+	// Use configured sample rate, default to 16000Hz (G.722 standard) if not set
 	sourceSampleRate := src.SampleRate
 	if sourceSampleRate == 0 {
-		sourceSampleRate = 16000 // G.722 标准采样率
+		sourceSampleRate = 16000 // G.722 standard sample rate
 	}
 	res := media.DefaultResampler(sourceSampleRate, pcm.SampleRate)
 	dec := NewG722Decoder(G722_RATE_DEFAULT, G722_DEFAULT)
@@ -83,10 +83,10 @@ func createG722Decode(src, pcm media.CodecConfig) media.EncoderFunc {
 }
 
 func createG722Encode(src, pcm media.CodecConfig) media.EncoderFunc {
-	// 使用配置的目标采样率，如果未设置则使用 G.722 标准采样率 16000Hz
+	// Use configured target sample rate, default to 16000Hz (G.722 standard) if not set
 	targetSampleRate := src.SampleRate
 	if targetSampleRate == 0 {
-		targetSampleRate = 16000 // G.722 标准采样率
+		targetSampleRate = 16000 // G.722 standard sample rate
 	}
 	res := media.DefaultResampler(pcm.SampleRate, targetSampleRate)
 	enc := NewG722Encoder(G722_RATE_DEFAULT, G722_DEFAULT)
@@ -108,7 +108,7 @@ func createG722Encode(src, pcm media.CodecConfig) media.EncoderFunc {
 	}
 }
 
-// NewG722Encoder 创建新的G.722编码器
+// NewG722Encoder creates a new G.722 encoder
 func NewG722Encoder(rate, mode int) *G722Encoder {
 	encoder := &G722Encoder{
 		rate:  rate,
@@ -197,7 +197,7 @@ func (e *G722Encoder) quantize(sample int16) int {
 	}
 }
 
-// NewG722Decoder 创建新的G.722解码器
+// NewG722Decoder creates a new G.722 decoder
 func NewG722Decoder(rate, mode int) *G722Decoder {
 	decoder := &G722Decoder{
 		rate:  rate,

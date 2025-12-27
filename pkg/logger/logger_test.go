@@ -3,6 +3,7 @@ package logger
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func makeTmpLogFile(t *testing.T, name string) string {
@@ -249,4 +252,334 @@ func TestEnvironmentNoise(t *testing.T) {
 	Warn(msg)
 	Error(msg)
 	fmt.Sprintf("")
+}
+
+func TestFatal(t *testing.T) {
+	// Fatal will exit the process, so we can't test it normally
+	// This test just verifies the function exists and can be called
+	// In a real scenario, Fatal would call os.Exit(1)
+	logPath := makeTmpLogFile(t, "fatal.log")
+	cfg := &LogConfig{
+		Level:      "info",
+		Filename:   logPath,
+		MaxSize:    1,
+		MaxAge:     1,
+		MaxBackups: 1,
+	}
+	if err := Init(cfg, "prod"); err != nil {
+		t.Fatalf("Init error: %v", err)
+	}
+
+	// Fatal will exit, so we can only test that it compiles and exists
+	// In production, this would call os.Exit(1)
+	// We can't actually test the exit behavior without mocking os.Exit
+	_ = Fatal
+}
+
+func TestGetAlertStats_NoAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Set alertManager to nil
+	alertManager = nil
+
+	stats := GetAlertStats()
+	assert.Nil(t, stats)
+}
+
+func TestGetAlertStats_WithAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Create a test alert manager
+	alertConfig := &AlertConfig{
+		Enabled:          true,
+		ErrorThreshold:   10,
+		WarningThreshold: 20,
+		TimeWindow:       time.Minute,
+		CooldownPeriod:   time.Minute,
+	}
+	alertManager = NewAlertManager(alertConfig)
+
+	stats := GetAlertStats()
+	assert.NotNil(t, stats)
+	assert.Equal(t, 0, stats.ErrorCount)
+	assert.Equal(t, 0, stats.WarningCount)
+}
+
+func TestResetAlertStats_NoAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Set alertManager to nil
+	alertManager = nil
+
+	// Should not panic
+	ResetAlertStats()
+}
+
+func TestResetAlertStats_WithAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Create a test alert manager
+	alertConfig := &AlertConfig{
+		Enabled:          true,
+		ErrorThreshold:   10,
+		WarningThreshold: 20,
+		TimeWindow:       time.Minute,
+		CooldownPeriod:   time.Minute,
+	}
+	alertManager = NewAlertManager(alertConfig)
+
+	// Increment some stats
+	alertManager.CheckAndAlert(zapcore.ErrorLevel, zapcore.Entry{}, nil)
+	alertManager.CheckAndAlert(zapcore.ErrorLevel, zapcore.Entry{}, nil)
+
+	stats := GetAlertStats()
+	assert.NotNil(t, stats)
+	assert.Greater(t, stats.ErrorCount, 0)
+
+	// Reset stats
+	ResetAlertStats()
+
+	stats = GetAlertStats()
+	assert.NotNil(t, stats)
+	assert.Equal(t, 0, stats.ErrorCount)
+	assert.Equal(t, 0, stats.WarningCount)
+}
+
+func TestIsAlertEnabled_NoAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Set alertManager to nil
+	alertManager = nil
+
+	enabled := IsAlertEnabled()
+	assert.False(t, enabled)
+}
+
+func TestIsAlertEnabled_WithAlertManager(t *testing.T) {
+	// Save original alertManager
+	originalAlertManager := alertManager
+	defer func() {
+		alertManager = originalAlertManager
+	}()
+
+	// Create a test alert manager
+	alertConfig := &AlertConfig{
+		Enabled:          true,
+		ErrorThreshold:   10,
+		WarningThreshold: 20,
+		TimeWindow:       time.Minute,
+		CooldownPeriod:   time.Minute,
+	}
+	alertManager = NewAlertManager(alertConfig)
+
+	enabled := IsAlertEnabled()
+	assert.True(t, enabled)
+}
+
+func TestGetDailyLogFilename(t *testing.T) {
+	testCases := []struct {
+		name     string
+		baseFile string
+		expect   string // Pattern to match
+	}{
+		{
+			name:     "standard log file",
+			baseFile: "app.log",
+			expect:   "app-",
+		},
+		{
+			name:     "log file with path",
+			baseFile: "/var/log/app.log",
+			expect:   "app-",
+		},
+		{
+			name:     "log file with directory",
+			baseFile: "logs/app.log",
+			expect:   "app-",
+		},
+		{
+			name:     "log file with extension",
+			baseFile: "application.log",
+			expect:   "application-",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := GetDailyLogFilename(tc.baseFile)
+			assert.Contains(t, result, tc.expect)
+			assert.Contains(t, result, ".log")
+			// Should contain date in format YYYY-MM-DD
+			assert.Contains(t, result, time.Now().Format("2006-01-02"))
+		})
+	}
+}
+
+func TestGetDailyLogFilename_EdgeCases(t *testing.T) {
+	// Test with no extension
+	result := GetDailyLogFilename("app")
+	assert.Contains(t, result, "app-")
+	assert.Contains(t, result, time.Now().Format("2006-01-02"))
+
+	// Test with multiple dots
+	result = GetDailyLogFilename("app.log.backup")
+	assert.Contains(t, result, "app.log-")
+	assert.Contains(t, result, time.Now().Format("2006-01-02"))
+}
+
+// Mock notification service for testing
+type mockNotificationService struct {
+	sentAlerts []*AlertInfo
+}
+
+func (m *mockNotificationService) SendAlert(ctx context.Context, alert *AlertInfo) error {
+	m.sentAlerts = append(m.sentAlerts, alert)
+	return nil
+}
+
+func TestAlertManager_GetStats(t *testing.T) {
+	alertConfig := &AlertConfig{
+		Enabled:          true,
+		ErrorThreshold:   10,
+		WarningThreshold: 20,
+		TimeWindow:       time.Minute,
+		CooldownPeriod:   time.Minute,
+	}
+	manager := NewAlertManager(alertConfig)
+
+	stats := manager.GetStats()
+	assert.NotNil(t, stats)
+	assert.Equal(t, 0, stats.ErrorCount)
+	assert.Equal(t, 0, stats.WarningCount)
+
+	// Add some errors
+	manager.CheckAndAlert(zapcore.ErrorLevel, zapcore.Entry{}, nil)
+	manager.CheckAndAlert(zapcore.ErrorLevel, zapcore.Entry{}, nil)
+
+	stats = manager.GetStats()
+	assert.Equal(t, 2, stats.ErrorCount)
+}
+
+func TestAlertManager_ResetStats(t *testing.T) {
+	alertConfig := &AlertConfig{
+		Enabled:          true,
+		ErrorThreshold:   10,
+		WarningThreshold: 20,
+		TimeWindow:       time.Minute,
+		CooldownPeriod:   time.Minute,
+	}
+	manager := NewAlertManager(alertConfig)
+
+	// Add some stats
+	manager.CheckAndAlert(zapcore.ErrorLevel, zapcore.Entry{}, nil)
+	manager.CheckAndAlert(zapcore.WarnLevel, zapcore.Entry{}, nil)
+
+	stats := manager.GetStats()
+	assert.Equal(t, 1, stats.ErrorCount)
+	assert.Equal(t, 1, stats.WarningCount)
+
+	// Reset
+	manager.ResetStats()
+
+	stats = manager.GetStats()
+	assert.Equal(t, 0, stats.ErrorCount)
+	assert.Equal(t, 0, stats.WarningCount)
+}
+
+func TestInitWithAlert(t *testing.T) {
+	logPath := makeTmpLogFile(t, "alert.log")
+	cfg := &LogConfig{
+		Level:      "info",
+		Filename:   logPath,
+		MaxSize:    1,
+		MaxAge:     1,
+		MaxBackups: 1,
+		Alert: &AlertConfig{
+			Enabled:          true,
+			ErrorThreshold:   5,
+			WarningThreshold: 10,
+			TimeWindow:       time.Minute,
+			CooldownPeriod:   time.Minute,
+		},
+	}
+
+	mockNotifier := &mockNotificationService{}
+	err := InitWithAlert(cfg, "prod", []NotificationService{mockNotifier})
+	assert.NoError(t, err)
+
+	// Verify alert manager was initialized
+	assert.True(t, IsAlertEnabled())
+	assert.NotNil(t, GetAlertStats())
+}
+
+func TestInitWithAlert_Disabled(t *testing.T) {
+	logPath := makeTmpLogFile(t, "no-alert.log")
+	cfg := &LogConfig{
+		Level:      "info",
+		Filename:   logPath,
+		MaxSize:    1,
+		MaxAge:     1,
+		MaxBackups: 1,
+		Alert: &AlertConfig{
+			Enabled: false, // Disabled
+		},
+	}
+
+	mockNotifier := &mockNotificationService{}
+	err := InitWithAlert(cfg, "prod", []NotificationService{mockNotifier})
+	assert.NoError(t, err)
+
+	// Alert manager should not be initialized when disabled
+	// But the global variable might still be nil or set, so we check IsAlertEnabled
+	// This depends on implementation - if alertManager is nil when disabled, IsAlertEnabled returns false
+}
+
+func TestGetDailyLogFilename_ComplexPath(t *testing.T) {
+	// Test with complex path
+	result := GetDailyLogFilename("/var/log/application/app.log")
+	assert.Contains(t, result, "app-")
+	assert.Contains(t, result, time.Now().Format("2006-01-02"))
+	assert.Contains(t, result, ".log")
+
+	// Extract directory and verify
+	dir := filepath.Dir(result)
+	assert.Equal(t, "/var/log/application", dir)
+}
+
+func TestGetDailyLogFilename_RelativePath(t *testing.T) {
+	// Test with relative path
+	result := GetDailyLogFilename("logs/app.log")
+	assert.Contains(t, result, "app-")
+	assert.Contains(t, result, time.Now().Format("2006-01-02"))
+	assert.Contains(t, result, ".log")
+
+	// Extract directory and verify
+	dir := filepath.Dir(result)
+	assert.Equal(t, "logs", dir)
+
+	// Test filename extraction
+	filename := filepath.Base(result)
+	assert.Contains(t, filename, "app-")
+	assert.Contains(t, filename, time.Now().Format("2006-01-02"))
+	assert.Contains(t, filename, ".log")
 }

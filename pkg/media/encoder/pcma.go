@@ -32,10 +32,10 @@ func createPCMADecode(src, pcm media.CodecConfig) media.EncoderFunc {
 }
 
 func createPCMAEncode(src, pcm media.CodecConfig) media.EncoderFunc {
-	// 使用配置的目标采样率，如果未设置则使用 PCMA 标准采样率 8000Hz
+	// Use configured target sample rate, default to 8000Hz (PCMA standard) if not set
 	targetSampleRate := src.SampleRate
 	if targetSampleRate == 0 {
-		targetSampleRate = 8000 // PCMA 标准采样率
+		targetSampleRate = 8000 // PCMA standard sample rate
 	}
 	res := media.DefaultResampler(pcm.SampleRate, targetSampleRate)
 
