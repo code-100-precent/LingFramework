@@ -1,0 +1,17 @@
+{
+  "welcome": "Welcome",
+  "hello": "Hello, %s!",
+  "goodbye": "Goodbye",
+  "error.not_found": "Resource not found",
+  "error.unauthorized": "Unauthorized access",
+  "error.forbidden": "Access forbidden",
+  "error.internal": "Internal server error",
+  "success.created": "Created successfully",
+  "success.updated": "Updated successfully",
+  "success.deleted": "Deleted successfully",
+  "validation.required": "This field is required",
+  "validation.email": "Invalid email format",
+  "validation.min": "Minimum value is %d",
+  "validation.max": "Maximum value is %d"
+}
+
